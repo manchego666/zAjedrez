@@ -7,19 +7,29 @@ using zAjedrez.Model.Entity;
 
 namespace zAjedrez.Data
 {
-    // Repositorio para gestionar la persistencia de usuarios en JSON
-    // Maneja lectura, escritura y operaciones CRUD de usuarios
+    // USER REPOSITORY CRUD OPERATIONS
+    // SERIALIZE/DESERIALIZE User objects to/from JSON file
+    // PERSIST state in [_filePath] @ runtime
+    // LoadAll: READ file -> PARSE JSON -> RET List<User>
+    // SaveAll: SERIALIZE List<User> -> WRITE file
+    // FindById: LOOP through collection, CMP Id, RET match
+    // Add: PUSH new User to collection -> CALL SaveAll()
+    // Update: FIND existing -> REPLACE -> CALL SaveAll()
+    // Delete: FIND existing -> POP from collection -> CALL SaveAll()
     public class UserRepository
     {
         #region Properties
 
-        private readonly string _filePath;
-        private readonly JsonSerializerOptions _jsonOptions;
+        private readonly string _filePath;                  // MOV [_filePath], path_to_file
+        private readonly JsonSerializerOptions _jsonOptions; // MOV [_jsonOptions], indent_flag
 
         #endregion
 
         #region Constructor
 
+        // CTOR: PUSH _filePath from parameter OR default "data/users.json"
+        // INIT JsonSerializerOptions with WriteIndented=true, CamelCase naming
+        // CALL EnsureDirectoryExists() to CREATE dir if missing
         public UserRepository(string filePath = "data/users.json")
         {
             _filePath = filePath;
@@ -35,7 +45,11 @@ namespace zAjedrez.Data
 
         #region Methods
 
-        // Carga todos los usuarios desde el archivo JSON
+        // LOAD ALL USERS FROM DISK
+        // TEST File.Exists(_filePath) // JZ return_empty_list
+        // CALL File.ReadAllText() -> PUSH json_string
+        // CALL JsonSerializer.Deserialize<List<User>>() -> PUSH list
+        // RET list OR empty_list on exception
         public List<User> LoadAll()
         {
             try
@@ -48,12 +62,15 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al cargar usuarios: {ex.Message}");
+                Console.WriteLine($"Error loading users: {ex.Message}");
                 return new List<User>();
             }
         }
 
-        // Guarda todos los usuarios en el archivo JSON
+        // SAVE ALL USERS TO DISK
+        // CALL JsonSerializer.Serialize() -> PUSH json_string
+        // CALL File.WriteAllText(_filePath, json) -> WRITE to disk
+        // RET true on success, false on exception
         public bool SaveAll(List<User> users)
         {
             try
@@ -64,45 +81,61 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al guardar usuarios: {ex.Message}");
+                Console.WriteLine($"Error saving users: {ex.Message}");
                 return false;
             }
         }
 
-        // Busca un usuario por ID
+        // FIND USER BY ID
+        // CALL LoadAll() -> PUSH collection
+        // LOOP: CMP u.Id, id // JE found_user
+        // RET FirstOrDefault() (null if not found)
         public User FindById(string id)
         {
             var users = LoadAll();
             return users.FirstOrDefault(u => u.Id == id);
         }
 
-        // Busca un usuario por nombre de usuario
+        // FIND USER BY USERNAME (case-insensitive)
+        // CALL LoadAll() -> PUSH collection
+        // LOOP: CMP u.Username.ToLower(), username.ToLower() // JE found_user
+        // RET FirstOrDefault() (null if not found)
         public User FindByUsername(string username)
         {
             var users = LoadAll();
             return users.FirstOrDefault(u => u.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
         }
 
-        // Añade un nuevo usuario
+        // ADD NEW USER
+        // CALL LoadAll() -> PUSH collection
+        // LOOP: CMP u.Username, user.Username // JE already_exists (RET false)
+        // PUSH user to collection
+        // CALL SaveAll(collection) -> WRITE disk
+        // RET status
         public bool Add(User user)
         {
             try
             {
                 var users = LoadAll();
                 if (users.Any(u => u.Username.Equals(user.Username, StringComparison.OrdinalIgnoreCase)))
-                    return false; // Usuario ya existe
+                    return false;
 
                 users.Add(user);
                 return SaveAll(users);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al añadir usuario: {ex.Message}");
+                Console.WriteLine($"Error adding user: {ex.Message}");
                 return false;
             }
         }
 
-        // Actualiza un usuario existente
+        // UPDATE EXISTING USER
+        // CALL LoadAll() -> PUSH collection
+        // FIND user where Id matches // JE not_found (RET false)
+        // PUSH (new) user to collection[index] -> REPLACE
+        // CALL SaveAll(collection) -> WRITE disk
+        // RET status
         public bool Update(User user)
         {
             try
@@ -119,12 +152,17 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al actualizar usuario: {ex.Message}");
+                Console.WriteLine($"Error updating user: {ex.Message}");
                 return false;
             }
         }
 
-        // Elimina un usuario
+        // DELETE USER BY ID
+        // CALL LoadAll() -> PUSH collection
+        // FIND user where Id matches // JE not_found (RET false)
+        // POP user from collection
+        // CALL SaveAll(collection) -> WRITE disk
+        // RET status
         public bool Delete(string userId)
         {
             try
@@ -140,19 +178,26 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar usuario: {ex.Message}");
+                Console.WriteLine($"Error deleting user: {ex.Message}");
                 return false;
             }
         }
 
-        // Retorna los usuarios ordenados por ELO (ranking)
+        // RETRIEVE RANKING (TOP N USERS BY ELO)
+        // CALL LoadAll() -> PUSH collection
+        // SORT by Elo descending (highest first)
+        // TAKE limit (default 10)
+        // RET sorted list
         public List<User> GetRanking(int limit = 10)
         {
             var users = LoadAll();
             return users.OrderByDescending(u => u.Elo).Take(limit).ToList();
         }
 
-        // Verifica que exista el directorio para el archivo
+        // ENSURE DIRECTORY EXISTS OR CREATE
+        // PARSE directory path from _filePath
+        // TEST Directory.Exists(directory) // JZ create_dir
+        // CALL Directory.CreateDirectory(directory)
         private void EnsureDirectoryExists()
         {
             string directory = Path.GetDirectoryName(_filePath);

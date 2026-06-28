@@ -4,9 +4,10 @@ using System;
 
 namespace zAjedrez.Model.Struct
 {
-    // Pieza Alfil
-    // Se mueve diagonalmente cualquier número de casillas
-    // No puede saltar sobre otras piezas
+    // BISHOP: MOV diagonal (|row_delta| == |col_delta|)
+    // NO jump: validate path clear via IsPathClear()
+    // Capture: any color != this.Color
+    // Attack vector: 4 diagonal directions (NE, NW, SE, SW) at 45 degrees
     public class BishopPiece : Piece
     {
         #region Constructor
@@ -20,28 +21,29 @@ namespace zAjedrez.Model.Struct
 
         #region Methods
 
+        // BISHOP MOVEMENT VALIDATION
+        // MOV AX, ABS(destRow - Row) // rowDiff
+        // MOV BX, ABS(destColumn - Column) // colDiff
+        // CMP AX, BX // JNE invalid_diagonal
+        // CALL IsPathClear(Row, Column, destRow, destColumn, board)
+        // RET status (JZ blocked, else clear)
         public override bool IsMoveLegal(int destRow, int destColumn, Piece[,] board)
         {
-            // Validar rango del tablero
             if (destRow < 0 || destRow > 7 || destColumn < 0 || destColumn > 7)
                 return false;
 
-            // No puede ser el mismo cuadrado
             if (destRow == Row && destColumn == Column)
                 return false;
 
-            // No puede capturarse a sí mismo
             if (IsFriendlyPieceAtPosition(destRow, destColumn, board))
                 return false;
 
             int rowDiff = Math.Abs(destRow - Row);
             int colDiff = Math.Abs(destColumn - Column);
 
-            // Movimiento diagonal: diferencia en filas = diferencia en columnas
             if (rowDiff != colDiff)
                 return false;
 
-            // Verificar que el camino esté despejado
             return IsPathClear(Row, Column, destRow, destColumn, board);
         }
 

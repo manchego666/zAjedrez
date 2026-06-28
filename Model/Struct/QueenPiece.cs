@@ -4,10 +4,11 @@ using System;
 
 namespace zAjedrez.Model.Struct
 {
-    // Pieza Reina
-    // Se mueve horizontalmente, verticalmente o diagonalmente cualquier número de casillas
-    // Combina movimientos de Torre y Alfil
-    // No puede saltar sobre otras piezas
+    // QUEEN: MOV horizontal OR vertical (Rook) OR diagonal (Bishop)
+    // Combines Rook + Bishop attack patterns
+    // NO jump: validate path clear
+    // Capture: any color != this.Color
+    // Attack vector: 8 directions (N,S,E,W,NE,NW,SE,SW)
     public class QueenPiece : Piece
     {
         #region Constructor
@@ -21,33 +22,32 @@ namespace zAjedrez.Model.Struct
 
         #region Methods
 
+        // QUEEN MOVEMENT VALIDATION (Rook OR Bishop logic)
+        // isHorizontalOrVertical: destRow == Row OR destColumn == Column
+        // isDiagonal: |rowDiff| == |colDiff| AND rowDiff > 0
+        // CMP isHorizontalOrVertical OR isDiagonal // JE direction_valid
+        // JMP invalid_move
+        // direction_valid: CALL IsPathClear() // RET
         public override bool IsMoveLegal(int destRow, int destColumn, Piece[,] board)
         {
-            // Validar rango del tablero
             if (destRow < 0 || destRow > 7 || destColumn < 0 || destColumn > 7)
                 return false;
 
-            // No puede ser el mismo cuadrado
             if (destRow == Row && destColumn == Column)
                 return false;
 
-            // No puede capturarse a sí mismo
             if (IsFriendlyPieceAtPosition(destRow, destColumn, board))
                 return false;
 
             int rowDiff = Math.Abs(destRow - Row);
             int colDiff = Math.Abs(destColumn - Column);
 
-            // Movimiento horizontal o vertical (como Torre)
             bool isHorizontalOrVertical = (destRow == Row) || (destColumn == Column);
-
-            // Movimiento diagonal (como Alfil)
             bool isDiagonal = (rowDiff == colDiff && rowDiff > 0);
 
             if (!isHorizontalOrVertical && !isDiagonal)
                 return false;
 
-            // Verificar que el camino esté despejado
             return IsPathClear(Row, Column, destRow, destColumn, board);
         }
 

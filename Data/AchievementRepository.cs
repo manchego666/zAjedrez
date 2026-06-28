@@ -7,19 +7,31 @@ using zAjedrez.Model.Entity;
 
 namespace zAjedrez.Data
 {
-    // Repositorio para gestionar la persistencia de logros en JSON
-    // Maneja lectura, escritura y operaciones CRUD de logros
+    // ACHIEVEMENT REPOSITORY CRUD OPERATIONS
+    // SERIALIZE/DESERIALIZE Achievement objects to/from JSON file
+    // PERSIST state in [_filePath] @ runtime
+    // LoadAll: READ file -> PARSE JSON -> RET List<Achievement>
+    // SaveAll: SERIALIZE List<Achievement> -> WRITE file
+    // FindById: LOOP through collection, CMP Id, RET match
+    // FindByCategory: FILTER by category string, RET filtered list
+    // Add: PUSH new Achievement to collection -> CALL SaveAll()
+    // Update: FIND existing -> REPLACE -> CALL SaveAll()
+    // Delete: FIND existing -> POP from collection -> CALL SaveAll()
+    // GetAchievementsByDifficulty: SORT by RequiredElo, RET ordered list
     public class AchievementRepository
     {
         #region Properties
 
-        private readonly string _filePath;
-        private readonly JsonSerializerOptions _jsonOptions;
+        private readonly string _filePath;                  // MOV [_filePath], path_to_file
+        private readonly JsonSerializerOptions _jsonOptions; // MOV [_jsonOptions], indent_flag
 
         #endregion
 
         #region Constructor
 
+        // CTOR: PUSH _filePath from parameter OR default "data/achievements.json"
+        // INIT JsonSerializerOptions with WriteIndented=true, CamelCase naming
+        // CALL EnsureDirectoryExists() to CREATE dir if missing
         public AchievementRepository(string filePath = "data/achievements.json")
         {
             _filePath = filePath;
@@ -35,7 +47,11 @@ namespace zAjedrez.Data
 
         #region Methods
 
-        // Carga todos los logros desde el archivo JSON
+        // LOAD ALL ACHIEVEMENTS FROM DISK
+        // TEST File.Exists(_filePath) // JZ return_empty_list
+        // CALL File.ReadAllText() -> PUSH json_string
+        // CALL JsonSerializer.Deserialize<List<Achievement>>() -> PUSH list
+        // RET list OR empty_list on exception
         public List<Achievement> LoadAll()
         {
             try
@@ -48,12 +64,15 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al cargar logros: {ex.Message}");
+                Console.WriteLine($"Error loading achievements: {ex.Message}");
                 return new List<Achievement>();
             }
         }
 
-        // Guarda todos los logros en el archivo JSON
+        // SAVE ALL ACHIEVEMENTS TO DISK
+        // CALL JsonSerializer.Serialize() -> PUSH json_string
+        // CALL File.WriteAllText(_filePath, json) -> WRITE to disk
+        // RET true on success, false on exception
         public bool SaveAll(List<Achievement> achievements)
         {
             try
@@ -64,26 +83,36 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al guardar logros: {ex.Message}");
+                Console.WriteLine($"Error saving achievements: {ex.Message}");
                 return false;
             }
         }
 
-        // Busca un logro por ID
+        // FIND ACHIEVEMENT BY ID
+        // CALL LoadAll() -> PUSH collection
+        // LOOP: CMP a.Id, id // JE found_achievement
+        // RET FirstOrDefault() (null if not found)
         public Achievement FindById(string id)
         {
             var achievements = LoadAll();
             return achievements.FirstOrDefault(a => a.Id == id);
         }
 
-        // Busca logros por categoría
+        // FIND ACHIEVEMENTS BY CATEGORY (filter operation)
+        // CALL LoadAll() -> PUSH collection
+        // LOOP: CMP a.Category.ToLower(), category.ToLower() // JE match (PUSH to results)
+        // RET filtered list
         public List<Achievement> FindByCategory(string category)
         {
             var achievements = LoadAll();
             return achievements.Where(a => a.Category.Equals(category, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
-        // Añade un nuevo logro
+        // ADD NEW ACHIEVEMENT
+        // CALL LoadAll() -> PUSH collection
+        // PUSH achievement to collection
+        // CALL SaveAll(collection) -> WRITE disk
+        // RET status
         public bool Add(Achievement achievement)
         {
             try
@@ -94,12 +123,17 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al añadir logro: {ex.Message}");
+                Console.WriteLine($"Error adding achievement: {ex.Message}");
                 return false;
             }
         }
 
-        // Actualiza un logro existente
+        // UPDATE EXISTING ACHIEVEMENT
+        // CALL LoadAll() -> PUSH collection
+        // FIND achievement where Id matches // JE not_found (RET false)
+        // PUSH (new) achievement to collection[index] -> REPLACE
+        // CALL SaveAll(collection) -> WRITE disk
+        // RET status
         public bool Update(Achievement achievement)
         {
             try
@@ -116,12 +150,17 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al actualizar logro: {ex.Message}");
+                Console.WriteLine($"Error updating achievement: {ex.Message}");
                 return false;
             }
         }
 
-        // Elimina un logro
+        // DELETE ACHIEVEMENT BY ID
+        // CALL LoadAll() -> PUSH collection
+        // FIND achievement where Id matches // JE not_found (RET false)
+        // POP achievement from collection
+        // CALL SaveAll(collection) -> WRITE disk
+        // RET status
         public bool Delete(string achievementId)
         {
             try
@@ -137,12 +176,16 @@ namespace zAjedrez.Data
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error al eliminar logro: {ex.Message}");
+                Console.WriteLine($"Error deleting achievement: {ex.Message}");
                 return false;
             }
         }
 
-        // Retorna todos los logros de una categoría ordenados por dificultad (ELO requerido)
+        // RETRIEVE ACHIEVEMENTS BY DIFFICULTY (sort by RequiredElo)
+        // CALL LoadAll() -> PUSH collection
+        // IF category != null: FILTER by category (optional)
+        // SORT by RequiredElo ascending (easiest first)
+        // RET sorted list
         public List<Achievement> GetAchievementsByDifficulty(string category = null)
         {
             var achievements = LoadAll();
@@ -152,7 +195,10 @@ namespace zAjedrez.Data
             return achievements.OrderBy(a => a.RequiredElo).ToList();
         }
 
-        // Verifica que exista el directorio para el archivo
+        // ENSURE DIRECTORY EXISTS OR CREATE
+        // PARSE directory path from _filePath
+        // TEST Directory.Exists(directory) // JZ create_dir
+        // CALL Directory.CreateDirectory(directory)
         private void EnsureDirectoryExists()
         {
             string directory = Path.GetDirectoryName(_filePath);

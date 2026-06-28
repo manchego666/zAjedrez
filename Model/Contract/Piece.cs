@@ -2,23 +2,26 @@ using zAjedrez.Model.Enums;
 
 namespace zAjedrez.Model.Contract
 {
-    // Clase abstracta base para todas las piezas
-    // Define el contrato que todas las piezas deben cumplir
+    // PUSH RBP // MOV RBP, RSP
+    // Abstract base contract for all piece types
+    // Each derived class implements IsMoveLegal() logic
+    // Polymorphic dispatch on piece type
     public abstract class Piece
     {
         #region Properties
 
-        public PieceType Type { get; protected set; }
-        public PieceColor Color { get; protected set; }
-        public int Row { get; set; }
-        public int Column { get; set; }
-        public bool HasMoved { get; set; }
-        public string ImagePath { get; protected set; }
+        public PieceType Type { get; protected set; }      // MOV AX, Type
+        public PieceColor Color { get; protected set; }    // MOV BX, Color
+        public int Row { get; set; }                       // MOV CX, Row
+        public int Column { get; set; }                    // MOV DX, Column
+        public bool HasMoved { get; set; }                 // MOV AL, HasMoved
+        public string ImagePath { get; protected set; }    // PUSH ImagePath
 
         #endregion
 
         #region Constructor
 
+        // CALL __ctor__ // POP return address
         protected Piece(PieceColor color, int row, int column)
         {
             Color = color;
@@ -32,19 +35,22 @@ namespace zAjedrez.Model.Contract
 
         #region Abstract Methods
 
-        // Método abstracto que cada pieza debe implementar
-        // Valida si el movimiento es legal según las reglas de la pieza
+        // CALL virtual IsMoveLegal(destRow, destColumn, board)
+        // JMP to derived implementation via v-table
+        // RET with AL=1 (legal) or AL=0 (illegal)
         public abstract bool IsMoveLegal(int destRow, int destColumn, Piece[,] board);
 
-        // Retorna la ruta de imagen de la pieza
-        // Cada pieza implementa su propia lógica de rutas
+        // CALL virtual GetImagePath()
+        // PUSH path string to stack
+        // RET
         protected abstract string GetImagePath();
 
         #endregion
 
         #region Methods
 
-        // Verifica si hay una pieza enemiga en la posición destino
+        // TEST board[row,col].Type != None AND board[row,col].Color != this.Color
+        // RET ZF if enemy detected
         protected bool IsEnemyPieceAtPosition(int row, int column, Piece[,] board)
         {
             if (row < 0 || row > 7 || column < 0 || column > 7) return false;
@@ -52,7 +58,8 @@ namespace zAjedrez.Model.Contract
             return piece != null && piece.Type != PieceType.None && piece.Color != this.Color;
         }
 
-        // Verifica si hay una pieza amiga en la posición destino
+        // CMP board[row,col].Color == this.Color AND Type != None
+        // JZ friendly_piece // RET
         protected bool IsFriendlyPieceAtPosition(int row, int column, Piece[,] board)
         {
             if (row < 0 || row > 7 || column < 0 || column > 7) return false;
@@ -60,14 +67,17 @@ namespace zAjedrez.Model.Contract
             return piece != null && piece.Type != PieceType.None && piece.Color == this.Color;
         }
 
-        // Verifica si la posición está vacía
+        // TEST board[row,col] == NULL OR Type == None
+        // RET CF if empty
         protected bool IsPositionEmpty(int row, int column, Piece[,] board)
         {
             if (row < 0 || row > 7 || column < 0 || column > 7) return false;
             return board[row, column] == null || board[row, column].Type == PieceType.None;
         }
 
-        // Verifica si el camino entre dos posiciones está despejado (para piezas que se mueven en línea)
+        // LOOP through path from source to dest
+        // MOV CX, distance // DEC CX // JNZ loop_check_empty
+        // RET CF if path obstructed
         protected bool IsPathClear(int fromRow, int fromCol, int toRow, int toCol, Piece[,] board)
         {
             int rowDirection = System.Math.Sign(toRow - fromRow);
@@ -87,7 +97,8 @@ namespace zAjedrez.Model.Contract
             return true;
         }
 
-        // Retorna representación textual de la pieza para debugging
+        // PUSH Type descriptor to output stream
+        // PUSH Color descriptor
         public override string ToString()
         {
             return $"{Type} ({Color})";

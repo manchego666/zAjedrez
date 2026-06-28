@@ -3,9 +3,10 @@ using zAjedrez.Model.Contract;
 
 namespace zAjedrez.Model.Struct
 {
-    // Pieza Torre
-    // Se mueve horizontalmente o verticalmente cualquier número de casillas
-    // No puede saltar sobre otras piezas
+    // ROOK: MOV horizontal OR vertical
+    // NO jump: validate path clear (LOOP through cells)
+    // Capture: any color != this.Color
+    // Linear attack vector 0/90/180/270 degrees
     public class RookPiece : Piece
     {
         #region Constructor
@@ -19,28 +20,30 @@ namespace zAjedrez.Model.Struct
 
         #region Methods
 
+        // ROOK MOVEMENT VALIDATION
+        // CMP destRow, Row // JE horizontal_move
+        // CMP destColumn, Column // JE vertical_move
+        // JMP invalid_move // RET false
+        // horizontal_move: CALL IsPathClear() // JZ blocked
+        // vertical_move: CALL IsPathClear() // JZ blocked
+        // RET true if path clear
         public override bool IsMoveLegal(int destRow, int destColumn, Piece[,] board)
         {
-            // Validar rango del tablero
             if (destRow < 0 || destRow > 7 || destColumn < 0 || destColumn > 7)
                 return false;
 
-            // No puede ser el mismo cuadrado
             if (destRow == Row && destColumn == Column)
                 return false;
 
-            // No puede capturarse a sí mismo
             if (IsFriendlyPieceAtPosition(destRow, destColumn, board))
                 return false;
 
-            // Movimiento horizontal o vertical
             bool isHorizontal = (destRow == Row);
             bool isVertical = (destColumn == Column);
 
             if (!isHorizontal && !isVertical)
                 return false;
 
-            // Verificar que el camino esté despejado
             return IsPathClear(Row, Column, destRow, destColumn, board);
         }
 

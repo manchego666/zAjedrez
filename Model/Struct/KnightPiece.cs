@@ -4,9 +4,11 @@ using System;
 
 namespace zAjedrez.Model.Struct
 {
-    // Pieza Caballo
-    // Se mueve en forma de L: 2 casillas en una dirección y 1 en perpendicular
-    // Es la única pieza que puede saltar sobre otras
+    // KNIGHT: MOV in L-shape (2,1) or (1,2) deltas
+    // JUMP: only piece that ignores path obstruction
+    // CMP |row_delta|, 2 AND |col_delta|, 1 OR |row_delta|, 1 AND |col_delta|, 2
+    // NO IsPathClear() call needed
+    // Attack vector: (2,1), (2,-1), (-2,1), (-2,-1), (1,2), (1,-2), (-1,2), (-1,-2)
     public class KnightPiece : Piece
     {
         #region Constructor
@@ -20,24 +22,27 @@ namespace zAjedrez.Model.Struct
 
         #region Methods
 
+        // KNIGHT MOVEMENT VALIDATION
+        // MOV AX, ABS(destRow - Row) // rowDiff
+        // MOV BX, ABS(destColumn - Column) // colDiff
+        // CMP AX, 2 AND BX, 1 // JE valid_l_shape
+        // CMP AX, 1 AND BX, 2 // JE valid_l_shape
+        // JMP invalid_move
+        // valid_l_shape: RET true
         public override bool IsMoveLegal(int destRow, int destColumn, Piece[,] board)
         {
-            // Validar rango del tablero
             if (destRow < 0 || destRow > 7 || destColumn < 0 || destColumn > 7)
                 return false;
 
-            // No puede ser el mismo cuadrado
             if (destRow == Row && destColumn == Column)
                 return false;
 
-            // No puede capturarse a sí mismo
             if (IsFriendlyPieceAtPosition(destRow, destColumn, board))
                 return false;
 
             int rowDiff = Math.Abs(destRow - Row);
             int colDiff = Math.Abs(destColumn - Column);
 
-            // Movimiento en L: (2,1) o (1,2)
             return (rowDiff == 2 && colDiff == 1) || (rowDiff == 1 && colDiff == 2);
         }
 

@@ -4,9 +4,11 @@ using System;
 
 namespace zAjedrez.Model.Struct
 {
-    // Pieza Rey
-    // Se mueve 1 casilla en cualquier dirección: horizontal, vertical o diagonal
-    // Es la pieza más importante, perder el rey significa perder la partida
+    // KING: MOV 1 square any direction (H,V,D)
+    // Most critical piece: loss == game over
+    // CMP |rowDiff|, 1 AND |colDiff|, 1 // JLE move_valid
+    // Attack vector: 8 adjacent squares (radius 1)
+    // TODO: Castling logic (separate from basic move)
     public class KingPiece : Piece
     {
         #region Constructor
@@ -20,24 +22,29 @@ namespace zAjedrez.Model.Struct
 
         #region Methods
 
+        // KING MOVEMENT VALIDATION
+        // MOV AX, ABS(destRow - Row) // rowDiff
+        // MOV BX, ABS(destColumn - Column) // colDiff
+        // CMP AX, 1 // JLE valid_row
+        // JMP invalid_move
+        // valid_row: CMP BX, 1 // JLE valid_col
+        // JMP invalid_move
+        // valid_col: MOV CX, rowDiff XOR colDiff // CMP CX, 0 // JE same_square
+        // RET true (move valid)
         public override bool IsMoveLegal(int destRow, int destColumn, Piece[,] board)
         {
-            // Validar rango del tablero
             if (destRow < 0 || destRow > 7 || destColumn < 0 || destColumn > 7)
                 return false;
 
-            // No puede ser el mismo cuadrado
             if (destRow == Row && destColumn == Column)
                 return false;
 
-            // No puede capturarse a sí mismo
             if (IsFriendlyPieceAtPosition(destRow, destColumn, board))
                 return false;
 
             int rowDiff = Math.Abs(destRow - Row);
             int colDiff = Math.Abs(destColumn - Column);
 
-            // El rey se mueve 1 casilla en cualquier dirección
             return (rowDiff <= 1 && colDiff <= 1) && !(rowDiff == 0 && colDiff == 0);
         }
 
